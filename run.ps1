@@ -17,13 +17,41 @@ $scriptRoot = if ($PSCommandPath) {
 }
 
 if (-not $scriptRoot) {
-    Write-Host "win10tools: running in bootstrap mode." -ForegroundColor Yellow
-    Write-Host "Full-remote bootstrap is not implemented yet (arriving in M9)." -ForegroundColor Yellow
-    Write-Host "Clone the repo and run the local copy:" -ForegroundColor Yellow
-    Write-Host "  git clone https://github.com/0xRnato/win10tools.git"
-    Write-Host "  cd win10tools"
-    Write-Host "  .\run.ps1"
-    exit 2
+    Write-Host 'win10tools: bootstrap mode - downloading source from GitHub...' -ForegroundColor Cyan
+    $stamp      = Get-Date -Format 'yyyyMMdd-HHmmss'
+    $target     = Join-Path $env:TEMP "win10tools-$stamp"
+    $zipUrl     = 'https://github.com/0xRnato/win10tools/archive/refs/heads/main.zip'
+    $zipPath    = Join-Path $target 'repo.zip'
+
+    try {
+        New-Item -Path $target -ItemType Directory -Force | Out-Null
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath -UseBasicParsing -ErrorAction Stop | Out-Null
+        Expand-Archive -Path $zipPath -DestinationPath $target -Force
+
+        $extracted = Get-ChildItem -LiteralPath $target -Directory -ErrorAction Stop |
+            Where-Object { $_.Name -like 'win10tools-*' } |
+            Select-Object -First 1
+        if (-not $extracted) { throw 'extracted archive missing win10tools-* directory' }
+
+        $localRun = Join-Path $extracted.FullName 'run.ps1'
+        if (-not (Test-Path -LiteralPath $localRun)) { throw "run.ps1 not found in $($extracted.FullName)" }
+
+        Write-Host "win10tools: handing off to $localRun" -ForegroundColor Cyan
+        $forward = @()
+        if ($Cli)           { $forward += '-Cli' }
+        if ($SkipElevation) { $forward += '-SkipElevation' }
+        & $localRun @forward
+        exit $LASTEXITCODE
+    } catch {
+        Write-Host "Bootstrap failed: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host ''
+        Write-Host 'Fallback (clone manually):' -ForegroundColor Yellow
+        Write-Host '  git clone https://github.com/0xRnato/win10tools.git'
+        Write-Host '  cd win10tools'
+        Write-Host '  .\run.ps1'
+        exit 2
+    }
 }
 
 $srcRoot = Join-Path $scriptRoot 'src'

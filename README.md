@@ -33,13 +33,15 @@ Most Windows cleanup / debloat scripts ship large opinionated presets. They disa
 
 ## Status
 
-Backend complete (milestones M1–M6). The action registry, enumerators, and action modules are shipped and tested:
+Usable end-to-end (milestones M1–M9):
 
 - **12 categories** registered at runtime: `Debloat`, `RAM`, `Disk`, `Deep Cleanup`, `Defender`, `Hardware`, `Maintenance`, `Apps`, `Startup`, `Services`, `Privacy`, `Tweaks`.
 - **~168 actions** enumerated on a typical Windows 10 Pro install (count varies with installed Appx packages, services, and startup entries).
-- **Test suite**: 183 unit tests + 3 integration tests, PSScriptAnalyzer clean, CI on `windows-latest`.
+- **WPF GUI** (M7) and **CLI menu** (M8) both consume the same registry.
+- **`iwr | iex` bootstrap** (M9) downloads a zipball, extracts it to `%TEMP%`, and hands off to the local `run.ps1`.
+- **Test suite**: 225 unit tests + 3 integration tests, PSScriptAnalyzer clean, CI on `windows-latest`.
 
-Next up: `M7` (full WPF GUI) and `M8` (CLI menu) to surface the registry to end users. Until they land, you can drive the registry directly via PowerShell as shown in the examples below.
+Remaining: `M10` polish (extra idempotency/revert coverage, scheduled quarantine cleanup, in-app help dialogs).
 
 ## Architecture
 
@@ -57,14 +59,14 @@ flowchart LR
     E --> E6[stale apps]
     E --> E7[leftover residue]
     D --> F[ram · disk · defender · hardware · maintenance · apps · tweaks]
-    B -. M7 .-> G[WPF GUI]
-    B -. M8 .-> H[CLI menu]
+    B --> G[WPF GUI]
+    B --> H[CLI menu]
     G --> I[Dry Run → Run]
     H --> I
     I --> J[safety: restore point · Recycle Bin · quarantine · revert]
 ```
 
-Every feature is a hashtable action in one registry. Both front-ends (planned in M7/M8) will consume the same registry, so GUI and CLI behave identically.
+Every feature is a hashtable action in one registry. Both front-ends consume the same registry, so GUI and CLI behave identically.
 
 ### Action contract
 
@@ -105,27 +107,28 @@ Every feature is a hashtable action in one registry. Both front-ends (planned in
 
 ## Quickstart
 
-> **Heads up:** the interactive UI (M7 WPF GUI, M8 CLI menu) is not on main yet. `run.ps1` currently boots the action registry and prints a summary — use the PowerShell examples below to drive actions until the UI lands.
+Open **PowerShell as Administrator** and run one of the following.
 
-Open **PowerShell as Administrator**, then:
+### Remote bootstrap (one-liner)
 
 ```powershell
-# remote bootstrap (one-liner)
 Set-ExecutionPolicy Bypass -Scope Process -Force
 iwr -useb https://raw.githubusercontent.com/0xRnato/win10tools/main/run.ps1 | iex
 ```
 
-Or clone and run locally:
+This downloads `run.ps1`, which then fetches the full zipball from GitHub, extracts it under `%TEMP%\win10tools-<timestamp>\`, and hands off to the extracted copy. From there every module under `src/` is dot-sourced and the WPF window opens (or the CLI menu if you pass `-Cli` later).
+
+### Clone and run locally
 
 ```powershell
 git clone https://github.com/0xRnato/win10tools.git
 cd win10tools
-.\run.ps1                    # loads registry, prints summary (GUI placeholder in M7)
-.\run.ps1 -Cli               # CLI placeholder (menu lands in M8)
-.\run.ps1 -SkipElevation     # run without admin for partial enumeration / debugging
+.\run.ps1                    # WPF GUI
+.\run.ps1 -Cli               # CLI menu
+.\run.ps1 -SkipElevation     # load registry without elevating (for inspection / debugging)
 ```
 
-### Driving actions today (before M7/M8)
+### Drive actions directly from PowerShell (advanced)
 
 ```powershell
 # load everything without running the script end-to-end
