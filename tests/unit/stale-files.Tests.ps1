@@ -13,8 +13,9 @@ AfterAll {
 
 Describe 'Invoke-StaleFilesScan' {
     BeforeEach {
-        $script:fixture = Join-Path $env:TEMP ("w10t-sf-fixture-" + [Guid]::NewGuid().ToString('N'))
-        New-Item -Path $script:fixture -ItemType Directory -Force | Out-Null
+        $rawFixture = Join-Path $env:TEMP ("w10t-sf-fixture-" + [Guid]::NewGuid().ToString('N'))
+        New-Item -Path $rawFixture -ItemType Directory -Force | Out-Null
+        $script:fixture = (Resolve-Path -LiteralPath $rawFixture).ProviderPath
 
         $old = Join-Path $script:fixture 'old.txt'
         'old' | Set-Content $old
