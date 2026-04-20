@@ -39,9 +39,9 @@ Usable end-to-end (milestones M1–M9):
 - **~168 actions** enumerated on a typical Windows 10 Pro install (count varies with installed Appx packages, services, and startup entries).
 - **WPF GUI** (M7) and **CLI menu** (M8) both consume the same registry.
 - **`iwr | iex` bootstrap** (M9) downloads a zipball, extracts it to `%TEMP%`, and hands off to the local `run.ps1`.
-- **Test suite**: 225 unit tests + 3 integration tests, PSScriptAnalyzer clean, CI on `windows-latest`.
-
-Remaining: `M10` polish (extra idempotency/revert coverage, scheduled quarantine cleanup, in-app help dialogs).
+- **Test suite**: 228 unit tests + 3 integration tests, PSScriptAnalyzer clean, CI on `windows-latest`.
+- **Scheduled quarantine cleanup** (optional action) — registers a daily 03:00 Windows task that prunes quarantine batches older than 30 days.
+- **In-app help** — `Help` button in the GUI (renders a quick-start card in the output panel) and `?` command in the CLI.
 
 ## Architecture
 
