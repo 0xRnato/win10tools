@@ -129,3 +129,54 @@ Describe 'Clear-Actions' {
         { Register-Action @{ Id='z.1'; Category='Z'; Name='z2'; Description='x'; Risk='Safe'; Invoke={ } } } | Should -Not -Throw
     }
 }
+
+Describe 'Enumerator registry' {
+    BeforeEach {
+        Clear-Enumerators
+        Clear-Actions
+    }
+
+    It 'registers an enumerator function name' {
+        Register-Enumerator 'My-Enum'
+        Get-EnumeratorList | Should -Contain 'My-Enum'
+    }
+
+    It 'deduplicates repeated registrations' {
+        Register-Enumerator 'My-Enum'
+        Register-Enumerator 'My-Enum'
+        (Get-EnumeratorList).Count | Should -Be 1
+    }
+
+    It 'invokes every enumerator that exists' {
+        function global:Test-EnumA { Register-Action @{ Id='pe.a'; Category='P'; Name='a'; Description='x'; Risk='Safe'; Invoke={ } } }
+        function global:Test-EnumB { Register-Action @{ Id='pe.b'; Category='P'; Name='b'; Description='x'; Risk='Safe'; Invoke={ } } }
+        try {
+            Register-Enumerator 'Test-EnumA'
+            Register-Enumerator 'Test-EnumB'
+            Invoke-AllEnumerators
+            Get-ActionCount | Should -Be 2
+        } finally {
+            Remove-Item function:\Test-EnumA -ErrorAction SilentlyContinue
+            Remove-Item function:\Test-EnumB -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'logs a warning when an enumerator is missing but does not throw' {
+        Register-Enumerator 'Does-Not-Exist'
+        { Invoke-AllEnumerators } | Should -Not -Throw
+    }
+
+    It 'continues past an enumerator that throws' {
+        function global:Test-EnumBroken { throw 'boom' }
+        function global:Test-EnumFine   { Register-Action @{ Id='pf.ok'; Category='P'; Name='ok'; Description='x'; Risk='Safe'; Invoke={ } } }
+        try {
+            Register-Enumerator 'Test-EnumBroken'
+            Register-Enumerator 'Test-EnumFine'
+            { Invoke-AllEnumerators } | Should -Not -Throw
+            Get-ActionCount | Should -Be 1
+        } finally {
+            Remove-Item function:\Test-EnumBroken -ErrorAction SilentlyContinue
+            Remove-Item function:\Test-EnumFine   -ErrorAction SilentlyContinue
+        }
+    }
+}

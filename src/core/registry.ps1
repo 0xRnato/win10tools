@@ -102,3 +102,39 @@ function Clear-Actions {
 function Get-ActionCount {
     $script:Win10ToolsActions.Count
 }
+
+$script:Win10ToolsEnumerators = [System.Collections.Generic.List[string]]::new()
+
+function Register-Enumerator {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$FunctionName
+    )
+
+    if (-not $script:Win10ToolsEnumerators.Contains($FunctionName)) {
+        $script:Win10ToolsEnumerators.Add($FunctionName) | Out-Null
+    }
+}
+
+function Get-EnumeratorList { @($script:Win10ToolsEnumerators.ToArray()) }
+
+function Clear-Enumerators { $script:Win10ToolsEnumerators.Clear() }
+
+function Invoke-AllEnumerators {
+    [CmdletBinding()]
+    param()
+
+    foreach ($name in $script:Win10ToolsEnumerators) {
+        $fn = Get-Command -Name $name -CommandType Function -ErrorAction SilentlyContinue
+        if (-not $fn) {
+            Write-W10Log -Level 'Warn' -Message 'enumerator not found' -Data @{ name = $name }
+            continue
+        }
+        try {
+            & $fn
+        } catch {
+            Write-W10Log -Level 'Warn' -Message 'enumerator threw' -Data @{ name = $name; error = $_.Exception.Message }
+        }
+    }
+}

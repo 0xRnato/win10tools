@@ -44,6 +44,8 @@ Write-W10Log -Level 'Info' -Message 'win10tools starting' -Data @{
     scriptRoot     = $scriptRoot
 }
 
+Invoke-AllEnumerators
+
 if (-not (Test-IsAdmin) -and -not $SkipElevation) {
     Write-Host 'win10tools needs Administrator. Relaunching elevated...' -ForegroundColor Yellow
     $argList = @()
