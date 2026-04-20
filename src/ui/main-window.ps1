@@ -139,6 +139,12 @@ function New-CategoryTab {
     $descCol.Width = [System.Windows.Controls.DataGridLength]::new(2, 'Star')
     $grid.Columns.Add($descCol) | Out-Null
 
+    $rowStyle = New-Object System.Windows.Style([System.Windows.Controls.DataGridRow])
+    $toolTipBinding = New-Object System.Windows.Data.Binding 'Description'
+    $toolTipSetter  = New-Object System.Windows.Setter([System.Windows.Controls.DataGridRow]::ToolTipProperty, $toolTipBinding)
+    $rowStyle.Setters.Add($toolTipSetter) | Out-Null
+    $grid.RowStyle = $rowStyle
+
     $observable = New-Object System.Collections.ObjectModel.ObservableCollection[object]
     foreach ($row in $Rows) { $observable.Add($row) | Out-Null }
     $grid.ItemsSource = $observable
@@ -167,6 +173,7 @@ function Show-MainWindow {
     $dryRunButton    = $window.FindName('DryRunButton')
     $runButton       = $window.FindName('RunButton')
     $clearButton     = $window.FindName('ClearSelectionButton')
+    $helpButton      = $window.FindName('HelpButton')
     $outputBox       = $window.FindName('OutputBox')
 
     if (Test-IsAdmin) {
@@ -236,6 +243,25 @@ function Show-MainWindow {
         $outputBox.Text = "Running $($actions.Count) actions..."
         $batch = Invoke-ActionBatch -Actions $actions
         $outputBox.Text = Format-RunReport -BatchResult $batch
+    })
+
+    $helpButton.Add_Click({
+        $lines = @(
+            'win10tools - quick help'
+            ''
+            '1. Tabs group actions by category. Hover any row for its description.'
+            '2. Tick the actions you want. Nothing runs unless you tick it.'
+            '3. Dry Run previews exactly what will happen. Run executes.'
+            '4. Risk colors: SAFE = green, MINOR = yellow, AVOID = red.'
+            '5. Any AVOID action needs double-confirm (type CONFIRM in the modal).'
+            '6. Destructive batches auto-create a restore point first.'
+            '7. Deletion mode controls where files go (Recycle Bin or direct).'
+            '8. Stale threshold slider affects Deep Cleanup scans.'
+            ''
+            'Logs: %LOCALAPPDATA%\win10tools\logs\YYYY-MM-DD.log'
+            'Quarantine: %LOCALAPPDATA%\win10tools\quarantine\'
+        )
+        $outputBox.Text = ($lines -join [Environment]::NewLine)
     })
 
     $clearButton.Add_Click({

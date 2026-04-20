@@ -179,6 +179,7 @@
 
                 <StackPanel Grid.Column="6" Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0">
                     <Button Name="ClearSelectionButton" Content="Clear" Width="72"/>
+                    <Button Name="HelpButton" Content="Help" Width="60"/>
                 </StackPanel>
             </Grid>
         </Border>

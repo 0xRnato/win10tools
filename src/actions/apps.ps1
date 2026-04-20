@@ -86,6 +86,29 @@ function Register-AppsActions {
                     total    = @($c.Packages).Count
                 }
             }
+            Revert      = {
+                param($c)
+                if (-not (Test-WingetAvailable)) {
+                    throw "winget is not available on this machine"
+                }
+                $removed = 0
+                $failed  = 0
+                foreach ($pkg in $c.Packages) {
+                    try {
+                        $wingetArgs = @('uninstall', '--id', $pkg, '--silent', '--accept-source-agreements', '--disable-interactivity')
+                        $proc = Start-Process -FilePath 'winget' -ArgumentList $wingetArgs -Wait -PassThru -WindowStyle Hidden
+                        if ($proc.ExitCode -eq 0) { $removed++ } else { $failed++ }
+                    } catch {
+                        $failed++
+                        Write-W10Log -Level 'Warn' -Message 'winget uninstall threw' -Data @{ package = $pkg; error = $_.Exception.Message }
+                    }
+                }
+                Write-W10Log -Level 'Info' -ActionId "apps.bulk-install.$($c.Category)" -Message 'bulk uninstall (revert) done' -Data @{
+                    category = $c.Category
+                    removed  = $removed
+                    failed   = $failed
+                }
+            }
             DryRunSummary = {
                 param($c)
                 "[APPS] winget install ($($c.Category)): $($c.Packages -join ', ')"

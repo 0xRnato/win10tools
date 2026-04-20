@@ -66,6 +66,86 @@ function Register-MaintenanceActions {
         }
         DryRunSummary = { '[MAINTENANCE] Checkpoint-Computer (rate-limited by Windows)' }
     }
+
+    $cleanupTaskName   = 'win10tools-quarantine-cleanup'
+    $cleanupScriptPath = Join-Path $env:LOCALAPPDATA 'win10tools\scheduled\cleanup-quarantine.ps1'
+
+    Register-Action @{
+        Id          = 'maintenance.schedule-quarantine-cleanup'
+        Category    = 'Maintenance'
+        Name        = 'Schedule daily quarantine cleanup (>30 days)'
+        Description = 'Creates a daily scheduled task that removes win10tools quarantine batches older than 30 days. Self-contained helper written to %LOCALAPPDATA%\win10tools\scheduled\.'
+        Risk        = 'Safe'
+        Destructive = $true
+        NeedsReboot = $false
+        NeedsAdmin  = $true
+        Context     = @{
+            TaskName   = $cleanupTaskName
+            ScriptPath = $cleanupScriptPath
+            MaxAgeDays = 30
+        }
+        Check       = {
+            param($c)
+            $existing = Get-ScheduledTask -TaskName $c.TaskName -ErrorAction SilentlyContinue
+            [bool]$existing -and (Test-Path -LiteralPath $c.ScriptPath)
+        }
+        Invoke      = {
+            param($c)
+            $scriptDir = Split-Path -Parent $c.ScriptPath
+            if (-not (Test-Path -LiteralPath $scriptDir)) {
+                New-Item -Path $scriptDir -ItemType Directory -Force | Out-Null
+            }
+
+            $body = @"
+`$root   = Join-Path `$env:LOCALAPPDATA 'win10tools\quarantine'
+if (-not (Test-Path -LiteralPath `$root)) { exit 0 }
+`$cutoff = (Get-Date).AddDays(-$($c.MaxAgeDays))
+Get-ChildItem -LiteralPath `$root -Directory -ErrorAction SilentlyContinue |
+    Where-Object { `$_.CreationTime -lt `$cutoff } |
+    ForEach-Object {
+        try { Remove-Item -LiteralPath `$_.FullName -Recurse -Force -ErrorAction Stop }
+        catch { }
+    }
+"@
+            Set-Content -LiteralPath $c.ScriptPath -Value $body -Encoding UTF8
+
+            $existing = Get-ScheduledTask -TaskName $c.TaskName -ErrorAction SilentlyContinue
+            if ($existing) {
+                Unregister-ScheduledTask -TaskName $c.TaskName -Confirm:$false -ErrorAction SilentlyContinue
+            }
+
+            $action    = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$($c.ScriptPath)`""
+            $trigger   = New-ScheduledTaskTrigger -Daily -At 3am
+            $principal = New-ScheduledTaskPrincipal -UserId (Get-CimInstance -Class Win32_ComputerSystem).UserName -LogonType Interactive -RunLevel Limited
+            $settings  = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
+
+            Register-ScheduledTask -TaskName $c.TaskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Description 'win10tools: daily cleanup of quarantine batches older than 30 days' -Force | Out-Null
+
+            Write-W10Log -Level 'Info' -ActionId 'maintenance.schedule-quarantine-cleanup' -Message 'scheduled task registered' -Data @{
+                taskName   = $c.TaskName
+                scriptPath = $c.ScriptPath
+                maxAgeDays = $c.MaxAgeDays
+            }
+        }
+        Revert      = {
+            param($c)
+            $existing = Get-ScheduledTask -TaskName $c.TaskName -ErrorAction SilentlyContinue
+            if ($existing) {
+                Unregister-ScheduledTask -TaskName $c.TaskName -Confirm:$false -ErrorAction SilentlyContinue
+            }
+            if (Test-Path -LiteralPath $c.ScriptPath) {
+                Remove-Item -LiteralPath $c.ScriptPath -Force -ErrorAction SilentlyContinue
+            }
+            $scriptDir = Split-Path -Parent $c.ScriptPath
+            if ((Test-Path -LiteralPath $scriptDir) -and -not (Get-ChildItem -LiteralPath $scriptDir -Force -ErrorAction SilentlyContinue)) {
+                Remove-Item -LiteralPath $scriptDir -Force -ErrorAction SilentlyContinue
+            }
+        }
+        DryRunSummary = {
+            param($c)
+            "[MAINTENANCE] Register-ScheduledTask '$($c.TaskName)' (daily 03:00) -> $($c.ScriptPath); prunes quarantine >$($c.MaxAgeDays)d"
+        }
+    }
 }
 
 Register-Enumerator 'Register-MaintenanceActions'

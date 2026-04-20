@@ -19,6 +19,43 @@ function Write-ColorLine {
     Write-Host $Text -ForegroundColor $Color
 }
 
+function Show-CliHelp {
+    [CmdletBinding()]
+    param()
+
+    $lines = @(
+        ''
+        '=== win10tools CLI help ==='
+        ''
+        'Top menu commands:'
+        '  <number>   enter the category at that position'
+        '  D          dry-run every selected action (preview only)'
+        '  R          run every selected action (with restore point + AVOID confirm)'
+        '  C          clear all selections'
+        '  ?          show this help'
+        '  Q          quit'
+        ''
+        'Category screen commands:'
+        '  <number>            toggle selection for that action (1-based)'
+        '  <a>,<b>             toggle multiple (comma-separated)'
+        '  <a>-<b>             toggle a range'
+        '  A                   mark every Safe action in the category'
+        '  N                   clear selections in the category'
+        '  I <number>          show full details of an action'
+        '  D                   dry-run every selected action'
+        '  R                   run every selected action'
+        '  B                   back to the top menu'
+        '  ?                   show this help'
+        '  Q                   quit'
+        ''
+        'Risk colors:  SAFE = green   MINOR = yellow   AVOID = red'
+        'AVOID batches must be confirmed by typing CONFIRM literally.'
+        ''
+    )
+    $lines | ForEach-Object { Write-Host $_ }
+    Read-Host 'Press Enter to continue' | Out-Null
+}
+
 function Read-AvoidConfirmCli {
     [CmdletBinding()]
     [OutputType([bool])]
@@ -52,7 +89,7 @@ function Show-TopMenu {
     }
 
     Write-Host ''
-    Write-Host '  [D] Dry Run selected   [R] Run selected   [C] Clear all   [Q] Quit'
+    Write-Host '  [D] Dry Run selected   [R] Run selected   [C] Clear all   [?] Help   [Q] Quit'
     Write-Host ''
     Read-Host 'Pick category number or command'
 }
@@ -81,6 +118,7 @@ function Show-CategoryScreen {
         Write-Host ''
         Write-Host '  [#,#-#] toggle indices   [A] toggle all Safe   [N] none   [B] back'
         Write-Host '  [I #]  info on action    [D] Dry Run selected   [R] Run selected'
+        Write-Host '  [?]    help              [Q] quit'
         Write-Host ''
         $userInput = Read-Host 'Pick'
         if ([string]::IsNullOrWhiteSpace($userInput)) { continue }
@@ -89,6 +127,7 @@ function Show-CategoryScreen {
         switch -Regex ($cmd) {
             '^B$' { $loop = $false; break }
             '^Q$' { return 'QUIT' }
+            '^\?$' { Show-CliHelp; break }
             '^A$' {
                 Set-RowsSelection -Rows $Rows -Selected $true -Filter 'Safe'
                 break
@@ -203,6 +242,7 @@ function Show-CliMenu {
         $cmd = $userInput.Trim().ToUpper()
         switch -Regex ($cmd) {
             '^Q$' { $running = $false; break }
+            '^\?$' { Show-CliHelp; break }
             '^D$' { Invoke-CliDryRun -RowsByCategory $rowsByCategory; break }
             '^R$' { Invoke-CliRun    -RowsByCategory $rowsByCategory; break }
             '^C$' {

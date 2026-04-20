@@ -54,6 +54,13 @@ Describe 'Register-AppsActions' {
         }
     }
 
+    It 'bulk-install actions carry a Revert scriptblock (winget uninstall)' {
+        Register-AppsActions
+        Get-Actions -IdPattern 'apps.bulk-install.*' | ForEach-Object {
+            $_.Revert | Should -BeOfType [scriptblock]
+        }
+    }
+
     It 'marks export-installed as Safe and non-destructive' {
         Register-AppsActions
         $a = Get-Action -Id 'apps.export-installed'
