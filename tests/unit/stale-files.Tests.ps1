@@ -13,9 +13,8 @@ AfterAll {
 
 Describe 'Invoke-StaleFilesScan' {
     BeforeEach {
-        $rawFixture = Join-Path $env:TEMP ("w10t-sf-fixture-" + [Guid]::NewGuid().ToString('N'))
-        New-Item -Path $rawFixture -ItemType Directory -Force | Out-Null
-        $script:fixture = (Resolve-Path -LiteralPath $rawFixture).ProviderPath
+        $script:fixture = Join-Path $env:TEMP ("w10t-sf-fixture-" + [Guid]::NewGuid().ToString('N'))
+        New-Item -Path $script:fixture -ItemType Directory -Force | Out-Null
 
         $old = Join-Path $script:fixture 'old.txt'
         'old' | Set-Content $old
@@ -40,14 +39,16 @@ Describe 'Invoke-StaleFilesScan' {
 
     It 'lists only items older than the threshold' {
         $items = @(Invoke-StaleFilesScan -Paths @($script:fixture) -ThresholdDays 90 -MaxDepth 0)
-        $items.Count                                     | Should -BeGreaterOrEqual 2
-        ($items | ForEach-Object { $_.Path })            | Should -Contain (Join-Path $script:fixture 'old.txt')
-        ($items | ForEach-Object { $_.Path })            | Should -Not -Contain (Join-Path $script:fixture 'new.txt')
+        $items.Count | Should -BeGreaterOrEqual 2
+        $leaves = @($items | ForEach-Object { Split-Path -Leaf $_.Path })
+        $leaves | Should -Contain 'old.txt'
+        $leaves | Should -Contain 'old-dir'
+        $leaves | Should -Not -Contain 'new.txt'
     }
 
     It 'tags files vs directories correctly' {
         $items = @(Invoke-StaleFilesScan -Paths @($script:fixture) -ThresholdDays 90 -MaxDepth 0)
-        $dirItem = $items | Where-Object { $_.Path -like '*old-dir*' } | Select-Object -First 1
+        $dirItem = $items | Where-Object { (Split-Path -Leaf $_.Path) -eq 'old-dir' } | Select-Object -First 1
         $dirItem.IsContainer | Should -BeTrue
     }
 
