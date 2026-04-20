@@ -1,0 +1,27 @@
+# Local planning and session context (not public)
+CLAUDE.md
+PLAN.md
+TASKS.md
+DESIGN.md
+.claude/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# PowerShell build / test artifacts
+*.log
+*.tmp
+build/
+dist/
+out/
+
+# Runtime data (should never land in repo)
+logs/
+quarantine/
