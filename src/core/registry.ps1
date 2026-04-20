@@ -44,14 +44,14 @@ function Register-Action {
             Name           = $Action.Name
             Description    = $Action.Description
             Risk           = $Action.Risk
-            Destructive    = [bool]($Action.Destructive)
-            NeedsReboot    = [bool]($Action.NeedsReboot)
-            NeedsAdmin     = if ($Action.ContainsKey('NeedsAdmin')) { [bool]$Action.NeedsAdmin } else { $true }
-            Context        = if ($Action.ContainsKey('Context')) { $Action.Context } else { @{} }
-            Check          = if ($Action.ContainsKey('Check')) { $Action.Check } else { $null }
+            Destructive    = if ($Action.ContainsKey('Destructive'))   { [bool]$Action.Destructive }   else { $false }
+            NeedsReboot    = if ($Action.ContainsKey('NeedsReboot'))   { [bool]$Action.NeedsReboot }   else { $false }
+            NeedsAdmin     = if ($Action.ContainsKey('NeedsAdmin'))    { [bool]$Action.NeedsAdmin }    else { $true }
+            Context        = if ($Action.ContainsKey('Context'))       { $Action.Context }             else { @{} }
+            Check          = if ($Action.ContainsKey('Check'))         { $Action.Check }               else { $null }
             Invoke         = $Action.Invoke
-            Revert         = if ($Action.ContainsKey('Revert')) { $Action.Revert } else { $null }
-            DryRunSummary  = if ($Action.ContainsKey('DryRunSummary')) { $Action.DryRunSummary } else { $null }
+            Revert         = if ($Action.ContainsKey('Revert'))        { $Action.Revert }              else { $null }
+            DryRunSummary  = if ($Action.ContainsKey('DryRunSummary')) { $Action.DryRunSummary }       else { $null }
         }
 
         $script:Win10ToolsActions.Add($normalised) | Out-Null
@@ -73,7 +73,7 @@ function Get-Actions {
     if ($Risk)      { $result = @($result | Where-Object { $_.Risk     -eq $Risk }) }
     if ($IdPattern) { $result = @($result | Where-Object { $_.Id    -like $IdPattern }) }
 
-    , @($result)
+    foreach ($r in $result) { $r }
 }
 
 function Get-Action {

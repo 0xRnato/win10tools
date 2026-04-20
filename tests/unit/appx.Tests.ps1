@@ -45,7 +45,7 @@ Describe 'Register-AppxActions' {
     It 'registers one action per installed package (user scope)' {
         $count = Register-AppxActions
         $count | Should -BeGreaterThan 0
-        (Get-Actions -Category 'Debloat').Count | Should -Be $count
+        @(Get-Actions -Category 'Debloat').Count | Should -Be $count
     }
 
     It 'propagates risk labels from risk-table' {

@@ -81,20 +81,20 @@ Describe 'Get-Actions filtering' {
     }
 
     It 'filters by Category' {
-        (Get-Actions -Category 'A').Count | Should -Be 2
+        @(Get-Actions -Category 'A').Count | Should -Be 2
     }
 
     It 'filters by Risk' {
-        (Get-Actions -Risk 'Safe').Count  | Should -Be 2
-        (Get-Actions -Risk 'Avoid').Count | Should -Be 1
+        @(Get-Actions -Risk 'Safe').Count  | Should -Be 2
+        @(Get-Actions -Risk 'Avoid').Count | Should -Be 1
     }
 
     It 'filters by IdPattern wildcard' {
-        (Get-Actions -IdPattern 'a.*').Count | Should -Be 2
+        @(Get-Actions -IdPattern 'a.*').Count | Should -Be 2
     }
 
     It 'combines filters' {
-        (Get-Actions -Category 'A' -Risk 'Safe').Count | Should -Be 1
+        @(Get-Actions -Category 'A' -Risk 'Safe').Count | Should -Be 1
     }
 
     It 'returns unique sorted categories' {
