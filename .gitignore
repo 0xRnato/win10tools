@@ -25,3 +25,7 @@ out/
 # Runtime data (should never land in repo)
 logs/
 quarantine/
+
+# Test artifacts
+TestResults.xml
+Coverage.xml

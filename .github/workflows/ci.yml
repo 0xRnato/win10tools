@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-test:
+    name: Lint + Unit tests
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Pester and PSScriptAnalyzer
+        shell: powershell
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module Pester -MinimumVersion 5.5.0 -Force -SkipPublisherCheck -AllowClobber -Scope CurrentUser
+          Install-Module PSScriptAnalyzer -Force -AllowClobber -Scope CurrentUser
+
+      - name: PSScriptAnalyzer
+        shell: powershell
+        run: |
+          Import-Module PSScriptAnalyzer
+          $settings = Join-Path $env:GITHUB_WORKSPACE 'PSScriptAnalyzerSettings.psd1'
+          $results = Invoke-ScriptAnalyzer -Path $env:GITHUB_WORKSPACE -Recurse -Settings $settings
+          if ($results) { $results | Format-Table -AutoSize }
+          $errors = $results | Where-Object Severity -eq 'Error'
+          if ($errors) { throw "ScriptAnalyzer found $($errors.Count) errors" }
+
+      - name: Pester (unit tests)
+        shell: powershell
+        run: |
+          Import-Module Pester -MinimumVersion 5.5.0
+          $config = New-PesterConfiguration
+          $config.Run.Path              = 'tests/unit'
+          $config.Filter.ExcludeTag     = @('Integration')
+          $config.Output.Verbosity      = 'Detailed'
+          $config.TestResult.Enabled    = $true
+          $config.TestResult.OutputPath = 'TestResults.xml'
+          $config.Run.Exit              = $true
+          Invoke-Pester -Configuration $config
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pester-results
+          path: TestResults.xml
