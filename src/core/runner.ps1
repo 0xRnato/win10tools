@@ -138,15 +138,15 @@ function Invoke-ActionBatch {
         $results += Invoke-Action -Action $a -DryRun:$DryRun
     }
 
-    $appliedIds = @($results | Where-Object { $_.status -eq 'applied' } | ForEach-Object { $_.actionId })
-    $rebootNeeded = [bool]($Actions | Where-Object { $_.NeedsReboot -and ($_.Id -in $appliedIds) })
+    $appliedIds   = @($results | Where-Object { $_.status -eq 'applied' } | ForEach-Object { $_.actionId })
+    $rebootNeeded = [bool](@($Actions | Where-Object { $_.NeedsReboot -and ($_.Id -in $appliedIds) }).Count)
 
     $summary = [ordered]@{
-        total       = $results.Count
-        applied     = ($results | Where-Object { $_.status -eq 'applied' }).Count
-        skipped     = ($results | Where-Object { $_.status -eq 'skipped' }).Count
-        dryRun      = ($results | Where-Object { $_.status -eq 'dry-run' }).Count
-        errors      = ($results | Where-Object { $_.status -eq 'error' }).Count
+        total       = @($results).Count
+        applied     = @($results | Where-Object { $_.status -eq 'applied' }).Count
+        skipped     = @($results | Where-Object { $_.status -eq 'skipped' }).Count
+        dryRun      = @($results | Where-Object { $_.status -eq 'dry-run' }).Count
+        errors      = @($results | Where-Object { $_.status -eq 'error' }).Count
         needsReboot = $rebootNeeded
     }
 

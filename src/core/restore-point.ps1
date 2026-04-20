@@ -1,7 +1,7 @@
 function Test-RestorePointEnabled {
     [CmdletBinding()]
     [OutputType([bool])]
-    param([string]$Drive = 'C:\')
+    param()
 
     try {
         $status = Get-CimInstance -Namespace 'root/default' -ClassName SystemRestoreConfig -ErrorAction Stop
@@ -86,7 +86,9 @@ function New-AutoRestorePoint {
                 } else {
                     Remove-ItemProperty -Path $rateLimitKey -Name $rateLimitName -ErrorAction SilentlyContinue
                 }
-            } catch {}
+            } catch {
+                Write-W10Log -Level 'Warn' -Message 'failed to restore rate limit value' -Data @{ error = $_.Exception.Message }
+            }
         }
     }
 }

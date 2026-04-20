@@ -69,11 +69,11 @@ function Get-Actions {
 
     $result = $script:Win10ToolsActions.ToArray()
 
-    if ($Category) { $result = $result | Where-Object { $_.Category -eq $Category } }
-    if ($Risk)     { $result = $result | Where-Object { $_.Risk -eq $Risk } }
-    if ($IdPattern) { $result = $result | Where-Object { $_.Id -like $IdPattern } }
+    if ($Category)  { $result = @($result | Where-Object { $_.Category -eq $Category }) }
+    if ($Risk)      { $result = @($result | Where-Object { $_.Risk     -eq $Risk }) }
+    if ($IdPattern) { $result = @($result | Where-Object { $_.Id    -like $IdPattern }) }
 
-    , $result
+    , @($result)
 }
 
 function Get-Action {
