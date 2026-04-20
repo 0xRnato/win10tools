@@ -76,7 +76,14 @@ if ($categories) {
 Write-Host ''
 
 if ($Cli) {
-    Write-Host 'CLI mode placeholder - interactive menu lands in M8.' -ForegroundColor DarkGray
+    $cliScript = Join-Path $srcRoot 'cli/menu.ps1'
+    if (Test-Path -LiteralPath $cliScript) {
+        . $cliScript
+        . (Join-Path $srcRoot 'ui/main-window-helpers.ps1')
+        Show-CliMenu
+    } else {
+        Write-Host 'CLI script missing.' -ForegroundColor DarkGray
+    }
 } else {
     $guiScript = Join-Path $srcRoot 'ui/main-window.ps1'
     if (Test-Path -LiteralPath $guiScript) {
