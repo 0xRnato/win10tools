@@ -78,7 +78,13 @@ Write-Host ''
 if ($Cli) {
     Write-Host 'CLI mode placeholder - interactive menu lands in M8.' -ForegroundColor DarkGray
 } else {
-    Write-Host 'GUI mode placeholder - WPF window lands in M7.' -ForegroundColor DarkGray
+    $guiScript = Join-Path $srcRoot 'ui/main-window.ps1'
+    if (Test-Path -LiteralPath $guiScript) {
+        . $guiScript
+        Show-MainWindow
+    } else {
+        Write-Host 'GUI script missing.' -ForegroundColor DarkGray
+    }
 }
 
 Write-W10Log -Level 'Info' -Message 'win10tools finished' -Data @{ status = 'ok' }

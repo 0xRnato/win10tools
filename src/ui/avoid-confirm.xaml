@@ -1,0 +1,72 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Confirm AVOID actions"
+        Height="460"
+        Width="620"
+        WindowStartupLocation="CenterOwner"
+        Background="#1b1b1f"
+        Foreground="#e1e1e6"
+        FontFamily="Segoe UI"
+        FontSize="13"
+        ShowInTaskbar="False"
+        ResizeMode="NoResize">
+
+    <Window.Resources>
+        <SolidColorBrush x:Key="Avoid"  Color="#ff7b80"/>
+        <SolidColorBrush x:Key="Border" Color="#3a3a40"/>
+        <SolidColorBrush x:Key="BgLight" Color="#2e2e33"/>
+    </Window.Resources>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0"
+                   Text="Some selected actions are flagged AVOID"
+                   FontSize="16"
+                   FontWeight="Bold"
+                   Foreground="{StaticResource Avoid}"
+                   Margin="0,0,0,8"/>
+
+        <TextBlock Grid.Row="1"
+                   TextWrapping="Wrap"
+                   Foreground="#e1e1e6"
+                   Margin="0,0,0,10">
+            <Run Text="These actions historically cause random bugs or performance issues. Review the list and type "/>
+            <Run FontWeight="Bold" Text="CONFIRM"/>
+            <Run Text=" below to proceed, or Cancel."/>
+        </TextBlock>
+
+        <ListBox Name="AvoidListBox"
+                 Grid.Row="2"
+                 Background="#0e0e10"
+                 Foreground="#ffb3b5"
+                 BorderBrush="{StaticResource Border}"
+                 BorderThickness="1"
+                 FontFamily="Consolas"
+                 Margin="0,0,0,10"/>
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,10">
+            <TextBlock Text="Type CONFIRM:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+            <TextBox Name="ConfirmBox"
+                     Width="200"
+                     Background="{StaticResource BgLight}"
+                     Foreground="#e1e1e6"
+                     BorderBrush="{StaticResource Border}"
+                     Padding="6,4"
+                     CaretBrush="#e1e1e6"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Name="CancelButton" Content="Cancel" Width="100" Margin="0,0,8,0" Padding="10,5"
+                    Background="{StaticResource BgLight}" Foreground="#e1e1e6" BorderBrush="{StaticResource Border}"/>
+            <Button Name="ConfirmButton" Content="Proceed" Width="100" Padding="10,5" IsEnabled="False"
+                    Background="{StaticResource Avoid}" Foreground="#1b1b1f" FontWeight="Bold" BorderBrush="{StaticResource Avoid}"/>
+        </StackPanel>
+    </Grid>
+</Window>
