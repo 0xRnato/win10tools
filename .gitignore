@@ -1,9 +1,7 @@
 # Local planning and session context (not public)
-CLAUDE.md
 PLAN.md
 TASKS.md
 DESIGN.md
-.claude/
 
 # Editor / IDE
 .vscode/

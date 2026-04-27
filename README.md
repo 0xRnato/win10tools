@@ -33,7 +33,7 @@ Most Windows cleanup / debloat scripts ship large opinionated presets. They disa
 
 ## Status
 
-Usable end-to-end (milestones M1–M9):
+Usable end-to-end (milestones M1–M10):
 
 - **12 categories** registered at runtime: `Debloat`, `RAM`, `Disk`, `Deep Cleanup`, `Defender`, `Hardware`, `Maintenance`, `Apps`, `Startup`, `Services`, `Privacy`, `Tweaks`.
 - **~168 actions** enumerated on a typical Windows 10 Pro install (count varies with installed Appx packages, services, and startup entries).
