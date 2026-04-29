@@ -43,6 +43,18 @@ function Get-SelectedRows {
     $selected
 }
 
+function Get-SelectionSignature {
+    [CmdletBinding()]
+    [OutputType([string])]
+    param(
+        [Parameter(Mandatory)]
+        [AllowEmptyCollection()]
+        [object[]]$Rows
+    )
+
+    (@($Rows | ForEach-Object { $_.Id } | Sort-Object) -join '|')
+}
+
 function Measure-RowSelection {
     [CmdletBinding()]
     param(
@@ -92,6 +104,18 @@ function Format-DryRunReport {
     $lines -join [Environment]::NewLine
 }
 
+function Test-DryRunRequired {
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param(
+        [Parameter(Mandatory)]
+        [AllowEmptyCollection()]
+        [object[]]$SelectedRows
+    )
+
+    @($SelectedRows).Count -gt 0
+}
+
 function Format-RunReport {
     [CmdletBinding()]
     [OutputType([string])]
@@ -113,7 +137,7 @@ function Format-RunReport {
 
     foreach ($r in $BatchResult.results) {
         $err = if ($r.error) { " - $($r.error)" } else { '' }
-        $lines.Add("[$($r.status)] $($r.actionId) (${($r.duration)}ms)$err") | Out-Null
+        $lines.Add("[$($r.status)] $($r.actionId) ($($r.duration)ms)$err") | Out-Null
     }
 
     $lines -join [Environment]::NewLine

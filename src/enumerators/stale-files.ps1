@@ -99,6 +99,46 @@ function Invoke-StaleFilesScan {
     $results | Sort-Object -Property @{Expression='AgeDays';Descending=$true}, @{Expression='Size';Descending=$true}
 }
 
+function Move-StaleFilesToQuarantine {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string[]]$Paths,
+
+        [int]$ThresholdDays = 90,
+        [int]$MaxDepth = 2,
+        [int]$MaxItems = 25,
+        [string]$Label = 'stale-files'
+    )
+
+    $items = @(Invoke-StaleFilesScan -Paths $Paths -ThresholdDays $ThresholdDays -MaxDepth $MaxDepth -MaxResults $MaxItems)
+    if ($items.Count -eq 0) {
+        return [pscustomobject]@{ BatchPath = $null; Total = 0; Moved = 0; Failed = 0; Items = @() }
+    }
+
+    $batch = New-QuarantineBatch -Label $Label
+    $moved = 0
+    $failed = 0
+    $results = foreach ($item in $items) {
+        try {
+            $target = Move-ToQuarantine -Path $item.Path -BatchPath $batch
+            if ($target) { $moved++ }
+            [pscustomobject]@{ Path = $item.Path; Target = $target; Status = if ($target) { 'moved' } else { 'skipped' } }
+        } catch {
+            $failed++
+            [pscustomobject]@{ Path = $item.Path; Target = $null; Status = 'error'; Error = $_.Exception.Message }
+        }
+    }
+
+    [pscustomobject]@{
+        BatchPath = $batch
+        Total     = $items.Count
+        Moved     = $moved
+        Failed    = $failed
+        Items     = @($results)
+    }
+}
+
 function Register-StaleFilesActions {
     [CmdletBinding()]
     param()
@@ -137,6 +177,29 @@ function Register-StaleFilesActions {
         }
     }
 
+    Register-Action @{
+        Id          = 'cleanup.stale-files.quarantine-user-folders'
+        Category    = 'Deep Cleanup'
+        Name        = 'Quarantine stale files from user folders'
+        Description = 'Moves up to 25 stale files or folders from Downloads, Documents, and Desktop into the 30-day win10tools quarantine.'
+        Risk        = 'Avoid'
+        Destructive = $true
+        NeedsAdmin  = $false
+        Context     = @{ Paths = $userFolders; ThresholdDays = 90; MaxDepth = 2; MaxItems = 25; Label = 'stale-user-folders' }
+        Invoke      = {
+            param($c)
+            $result = Move-StaleFilesToQuarantine -Paths $c.Paths -ThresholdDays $c.ThresholdDays -MaxDepth $c.MaxDepth -MaxItems $c.MaxItems -Label $c.Label
+            Write-W10Log -Level 'Info' -ActionId 'cleanup.stale-files.quarantine-user-folders' -Message 'stale files quarantined' -Data @{
+                total = $result.Total; moved = $result.Moved; failed = $result.Failed; batch = $result.BatchPath
+            }
+            $result
+        }
+        DryRunSummary = {
+            param($c)
+            "[DEEP-CLEAN] Move up to $($c.MaxItems) stale user-folder items to quarantine; threshold $($c.ThresholdDays) days"
+        }
+    }
+
     $appDataFolders = @(
         $env:APPDATA
         $env:LOCALAPPDATA
@@ -166,6 +229,29 @@ function Register-StaleFilesActions {
         DryRunSummary = {
             param($c)
             "[DEEP-CLEAN] Scan %APPDATA% and %LOCALAPPDATA% (depth $($c.MaxDepth)); threshold $($c.ThresholdDays) days"
+        }
+    }
+
+    Register-Action @{
+        Id          = 'cleanup.stale-files.quarantine-appdata'
+        Category    = 'Deep Cleanup'
+        Name        = 'Quarantine stale AppData items'
+        Description = 'Moves up to 25 stale top-level AppData items into the 30-day win10tools quarantine.'
+        Risk        = 'Avoid'
+        Destructive = $true
+        NeedsAdmin  = $false
+        Context     = @{ Paths = $appDataFolders; ThresholdDays = 90; MaxDepth = 1; MaxItems = 25; Label = 'stale-appdata' }
+        Invoke      = {
+            param($c)
+            $result = Move-StaleFilesToQuarantine -Paths $c.Paths -ThresholdDays $c.ThresholdDays -MaxDepth $c.MaxDepth -MaxItems $c.MaxItems -Label $c.Label
+            Write-W10Log -Level 'Info' -ActionId 'cleanup.stale-files.quarantine-appdata' -Message 'stale AppData items quarantined' -Data @{
+                total = $result.Total; moved = $result.Moved; failed = $result.Failed; batch = $result.BatchPath
+            }
+            $result
+        }
+        DryRunSummary = {
+            param($c)
+            "[DEEP-CLEAN] Move up to $($c.MaxItems) stale AppData items to quarantine; threshold $($c.ThresholdDays) days"
         }
     }
 }

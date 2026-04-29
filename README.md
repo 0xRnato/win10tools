@@ -24,18 +24,18 @@ Most Windows cleanup and debloat scripts are built around broad presets: disable
 
 `win10tools` takes a different approach. It inspects the current machine, builds a live action registry, and lets the user review each item before anything runs. Every action is unchecked by default, every action has a risk label, and destructive batches go through safety checks such as dry-run previews, restore points, Recycle Bin deletion, quarantine, and revert scriptblocks where the change is reversible.
 
-The project is designed as a portfolio-grade Windows automation tool: practical, testable, cautious, and built with native Windows technology.
+The project is designed as a practical Windows automation tool: testable, cautious, and built with native Windows technology.
 
 ## Current Status
 
-The main feature set is implemented through milestone M10. The remaining work is release validation on a clean Windows 10 VM and portfolio polish.
+The main feature set is implemented. Validation should be done on a clean Windows 10 VM before using destructive actions on a real machine.
 
 - **12 action categories**: `Debloat`, `RAM`, `Disk`, `Deep Cleanup`, `Defender`, `Hardware`, `Maintenance`, `Apps`, `Startup`, `Services`, `Privacy`, and `Tweaks`.
 - **Runtime action registry** shared by GUI and CLI.
 - **WPF desktop UI** for tabbed action review and execution.
 - **CLI fallback** for terminal-only sessions.
 - **One-line bootstrap** through `iwr | iex`.
-- **229 unit tests + 3 integration tests** in Pester.
+- **232 unit tests + 3 integration tests** in Pester.
 - **PSScriptAnalyzer + Pester CI** on GitHub Actions.
 - **No telemetry, analytics, update pings, or paid services.**
 
@@ -46,7 +46,7 @@ The main feature set is implemented through milestone M10. The remaining work is
 | **Debloat** | Runtime-enumerated Appx and provisioned packages with `SAFE`, `MINOR`, and `AVOID` risk labels. |
 | **RAM** | Working-set trim and standby-list purge actions. |
 | **Disk** | Temp files, crash dumps, Windows Update cache, thumbnail cache, Delivery Optimization cache, browser caches, Recycle Bin, and `cleanmgr`. |
-| **Deep Cleanup** | Stale files, unused apps, leftover folders, orphaned registry traces, and dead shortcuts. |
+| **Deep Cleanup** | Stale files, unused apps, leftover folders, orphaned registry traces, dead shortcuts, and explicit quarantine actions. |
 | **Defender** | Quick scan, full scan, signature update, Defender status, and threat history. |
 | **Hardware** | SMART health, memory diagnostics, scheduled disk check, battery report, `dxdiag`, event-log triage, and optional CPU temperature readout. |
 | **Maintenance** | `sfc`, DISM health checks, DISM repair, manual restore point, and scheduled quarantine cleanup. |
@@ -66,7 +66,7 @@ Safety is the central design constraint of the project.
 - **AVOID double-confirmation.** Risky actions require an explicit confirmation flow.
 - **Restore points.** Destructive batches call the restore-point helper before execution.
 - **Recycle Bin default.** File deletion uses the Recycle Bin unless direct delete is explicitly selected.
-- **30-day quarantine.** Leftover cleanup moves residue to `%LOCALAPPDATA%\win10tools\quarantine`.
+- **30-day quarantine.** Deep Cleanup quarantine actions move residue to `%LOCALAPPDATA%\win10tools\quarantine`.
 - **Revert support.** Reversible actions carry a `Revert` scriptblock.
 - **Structured logs.** JSONL logs are written under `%LOCALAPPDATA%\win10tools\logs`.
 - **Zero telemetry.** The tool does not phone home.
@@ -180,10 +180,10 @@ cd win10tools
 .\run.ps1 -Cli
 ```
 
-Use `-SkipElevation` only for inspection/debugging flows that should not perform privileged actions:
+Use `-LoadOnly` for non-interactive validation that loads modules and enumerates actions without opening the GUI/CLI:
 
 ```powershell
-.\run.ps1 -SkipElevation
+.\run.ps1 -SkipElevation -LoadOnly
 ```
 
 ## Requirements
@@ -219,19 +219,7 @@ Run lint:
 Invoke-ScriptAnalyzer -Path . -Recurse -Settings .\PSScriptAnalyzerSettings.psd1
 ```
 
-CI runs PSScriptAnalyzer and the unit suite on `windows-latest`.
-
-## Release Checklist
-
-Before publishing a release:
-
-- Run unit tests and integration tests on a non-production machine.
-- Run the bootstrap flow on a clean Windows 10 VM snapshot.
-- Confirm GUI and CLI open correctly.
-- Confirm Dry Run output for every category.
-- Test destructive actions only in a disposable VM.
-- Confirm AVOID confirmation, restore-point behavior, quarantine, logs, and revert flows.
-- Create a version tag and GitHub release after validation.
+CI runs PSScriptAnalyzer, the unit suite, and a non-interactive integration smoke on `windows-latest`.
 
 ## Development Notes
 

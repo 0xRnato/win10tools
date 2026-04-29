@@ -1,8 +1,7 @@
 function Invoke-DiskPathClear {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$Path,
-        [switch]$Recurse
+        [Parameter(Mandatory)][string]$Path
     )
 
     if (-not (Test-Path -LiteralPath $Path)) {
@@ -14,8 +13,8 @@ function Invoke-DiskPathClear {
     $failed  = 0
     Get-ChildItem -LiteralPath $Path -Force -ErrorAction SilentlyContinue | ForEach-Object {
         try {
-            Remove-Item -LiteralPath $_.FullName -Recurse:$Recurse -Force -ErrorAction Stop
-            $deleted++
+            $result = Remove-ItemSafely -Path $_.FullName
+            if ($result.removed) { $deleted++ } else { $failed++ }
         } catch { $failed++ }
     }
     Write-W10Log -Level 'Info' -Message "cleared $deleted items ($failed locked)" -Data @{ path = $Path }
@@ -72,7 +71,7 @@ function Register-DiskActions {
             Context     = @{ Path = $d.Path }
             Invoke      = {
                 param($c)
-                Invoke-DiskPathClear -Path $c.Path -Recurse
+                Invoke-DiskPathClear -Path $c.Path
             }
             Check       = {
                 param($c)
@@ -120,7 +119,7 @@ function Register-DiskActions {
                 try { Stop-Service -Name $s -Force -ErrorAction Stop } catch { Write-Verbose "stop $s : $($_.Exception.Message)" }
             }
             $dl = Join-Path $env:WINDIR 'SoftwareDistribution\Download'
-            if (Test-Path $dl) { Remove-Item -LiteralPath $dl -Recurse -Force -ErrorAction SilentlyContinue }
+            if (Test-Path $dl) { Remove-ItemSafely -Path $dl | Out-Null }
             foreach ($s in $services) {
                 try { Start-Service -Name $s -ErrorAction Stop } catch { Write-Verbose "start $s : $($_.Exception.Message)" }
             }
@@ -177,10 +176,10 @@ function Register-DiskActions {
             $thumbs = Join-Path $env:LOCALAPPDATA 'Microsoft\Windows\Explorer'
             if (-not (Test-Path $thumbs)) { return }
             Get-ChildItem -LiteralPath $thumbs -Filter 'thumbcache_*.db' -Force -ErrorAction SilentlyContinue | ForEach-Object {
-                try { Remove-Item -LiteralPath $_.FullName -Force -ErrorAction Stop } catch { Write-Verbose "locked: $($_.FullName)" }
+                try { Remove-ItemSafely -Path $_.FullName | Out-Null } catch { Write-Verbose "locked: $($_.FullName)" }
             }
             Get-ChildItem -LiteralPath $thumbs -Filter 'iconcache_*.db' -Force -ErrorAction SilentlyContinue | ForEach-Object {
-                try { Remove-Item -LiteralPath $_.FullName -Force -ErrorAction Stop } catch { Write-Verbose "locked: $($_.FullName)" }
+                try { Remove-ItemSafely -Path $_.FullName | Out-Null } catch { Write-Verbose "locked: $($_.FullName)" }
             }
             Write-W10Log -Level 'Info' -ActionId 'disk.clear-thumbnail-cache' -Message 'thumbnail + icon caches cleared'
         }
@@ -216,7 +215,7 @@ function Register-DiskActions {
                     throw "$($c.Browser) is running; close it first"
                 }
                 if (Test-Path -LiteralPath $c.CachePath) {
-                    Invoke-DiskPathClear -Path $c.CachePath -Recurse
+                    Invoke-DiskPathClear -Path $c.CachePath
                 }
             }
             DryRunSummary = {

@@ -140,6 +140,49 @@ function Invoke-LeftoverScan {
     $candidates | Sort-Object -Property @{Expression='Confidence';Descending=$false}, @{Expression='Size';Descending=$true}
 }
 
+function Move-LeftoverResidueToQuarantine {
+    [CmdletBinding()]
+    param(
+        [ValidateSet('User', 'Machine', 'All')]
+        [string]$Scope = 'User',
+
+        [ValidateSet('High', 'Medium')]
+        [string]$MinimumConfidence = 'High',
+
+        [int]$MaxItems = 25
+    )
+
+    $items = @(Invoke-LeftoverScan -Scope $Scope | Where-Object {
+        $_.Confidence -eq 'High' -or ($MinimumConfidence -eq 'Medium' -and $_.Confidence -eq 'Medium')
+    } | Select-Object -First $MaxItems)
+
+    if ($items.Count -eq 0) {
+        return [pscustomobject]@{ BatchPath = $null; Total = 0; Moved = 0; Failed = 0; Items = @() }
+    }
+
+    $batch = New-QuarantineBatch -Label "leftover-$($Scope.ToLowerInvariant())"
+    $moved = 0
+    $failed = 0
+    $results = foreach ($item in $items) {
+        try {
+            $target = Move-ToQuarantine -Path $item.Path -BatchPath $batch
+            if ($target) { $moved++ }
+            [pscustomobject]@{ Path = $item.Path; Target = $target; Status = if ($target) { 'moved' } else { 'skipped' }; Confidence = $item.Confidence }
+        } catch {
+            $failed++
+            [pscustomobject]@{ Path = $item.Path; Target = $null; Status = 'error'; Confidence = $item.Confidence; Error = $_.Exception.Message }
+        }
+    }
+
+    [pscustomobject]@{
+        BatchPath = $batch
+        Total     = $items.Count
+        Moved     = $moved
+        Failed    = $failed
+        Items     = @($results)
+    }
+}
+
 function Register-LeftoverActions {
     [CmdletBinding()]
     param()
@@ -174,6 +217,29 @@ function Register-LeftoverActions {
     }
 
     Register-Action @{
+        Id          = 'cleanup.leftover.quarantine-user'
+        Category    = 'Deep Cleanup'
+        Name        = 'Quarantine high-confidence user leftovers'
+        Description = 'Moves up to 25 high-confidence orphaned user-scope residue items into the 30-day win10tools quarantine.'
+        Risk        = 'Minor'
+        Destructive = $true
+        NeedsAdmin  = $false
+        Context     = @{ Scope = 'User'; MinimumConfidence = 'High'; MaxItems = 25 }
+        Invoke      = {
+            param($c)
+            $result = Move-LeftoverResidueToQuarantine -Scope $c.Scope -MinimumConfidence $c.MinimumConfidence -MaxItems $c.MaxItems
+            Write-W10Log -Level 'Info' -ActionId 'cleanup.leftover.quarantine-user' -Message 'leftover residue quarantined' -Data @{
+                total = $result.Total; moved = $result.Moved; failed = $result.Failed; batch = $result.BatchPath
+            }
+            $result
+        }
+        DryRunSummary = {
+            param($c)
+            "[DEEP-CLEAN] Move up to $($c.MaxItems) high-confidence user leftovers to quarantine"
+        }
+    }
+
+    Register-Action @{
         Id          = 'cleanup.leftover.scan-machine'
         Category    = 'Deep Cleanup'
         Name        = 'Scan machine scope for leftover residue'
@@ -199,6 +265,29 @@ function Register-LeftoverActions {
         DryRunSummary = {
             param($c)
             "[DEEP-CLEAN] Scan machine scope ($($c.Scope)) for orphaned residue"
+        }
+    }
+
+    Register-Action @{
+        Id          = 'cleanup.leftover.quarantine-machine'
+        Category    = 'Deep Cleanup'
+        Name        = 'Quarantine high-confidence machine leftovers'
+        Description = 'Moves up to 25 high-confidence machine-scope residue items into the 30-day win10tools quarantine.'
+        Risk        = 'Avoid'
+        Destructive = $true
+        NeedsAdmin  = $true
+        Context     = @{ Scope = 'Machine'; MinimumConfidence = 'High'; MaxItems = 25 }
+        Invoke      = {
+            param($c)
+            $result = Move-LeftoverResidueToQuarantine -Scope $c.Scope -MinimumConfidence $c.MinimumConfidence -MaxItems $c.MaxItems
+            Write-W10Log -Level 'Info' -ActionId 'cleanup.leftover.quarantine-machine' -Message 'machine leftover residue quarantined' -Data @{
+                total = $result.Total; moved = $result.Moved; failed = $result.Failed; batch = $result.BatchPath
+            }
+            $result
+        }
+        DryRunSummary = {
+            param($c)
+            "[DEEP-CLEAN] Move up to $($c.MaxItems) high-confidence machine leftovers to quarantine"
         }
     }
 }

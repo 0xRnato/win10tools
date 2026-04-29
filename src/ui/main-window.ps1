@@ -184,6 +184,7 @@ function Show-MainWindow {
 
     $categories = Get-ActionCategories
     $rowsByCategory = @{}
+    $script:W10GuiLastDryRunSignature = $null
 
     foreach ($cat in $categories) {
         $rows = @(Get-Actions -Category $cat | ConvertTo-ActionRow)
@@ -220,6 +221,7 @@ function Show-MainWindow {
             $outputBox.Text = 'Nothing selected. Tick one or more rows first.'
             return
         }
+        $script:W10GuiLastDryRunSignature = Get-SelectionSignature -Rows $selected
         $outputBox.Text = Format-DryRunReport -SelectedRows $selected
     })
 
@@ -227,6 +229,12 @@ function Show-MainWindow {
         $selected = @(Get-SelectedRows -RowsByCategory $rowsByCategory)
         if ($selected.Count -eq 0) {
             $outputBox.Text = 'Nothing selected.'
+            return
+        }
+
+        $currentSignature = Get-SelectionSignature -Rows $selected
+        if ((Test-DryRunRequired -SelectedRows $selected) -and $script:W10GuiLastDryRunSignature -ne $currentSignature) {
+            $outputBox.Text = 'Dry Run required. Preview the current selection before running it.'
             return
         }
 

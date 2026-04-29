@@ -100,6 +100,27 @@ Describe 'Get-SelectedRows' {
     }
 }
 
+Describe 'Get-SelectionSignature' {
+    It 'returns the same signature regardless of row order' {
+        $a = New-TestAction -Id 'sig.b' -Name 'B' | ConvertTo-ActionRow
+        $b = New-TestAction -Id 'sig.a' -Name 'A' | ConvertTo-ActionRow
+        Get-SelectionSignature -Rows @($a, $b) | Should -Be (Get-SelectionSignature -Rows @($b, $a))
+    }
+}
+
+Describe 'Test-DryRunRequired' {
+    It 'requires dry run for any selected row' {
+        $safe = New-TestAction -Id 'dr.safe' -Name 'Safe' | ConvertTo-ActionRow
+        $destructive = New-TestAction -Id 'dr.destructive' -Name 'Destructive' -Destructive $true | ConvertTo-ActionRow
+        $avoid = New-TestAction -Id 'dr.avoid' -Name 'Avoid' -Risk 'Avoid' | ConvertTo-ActionRow
+
+        Test-DryRunRequired -SelectedRows @() | Should -BeFalse
+        Test-DryRunRequired -SelectedRows @($safe) | Should -BeTrue
+        Test-DryRunRequired -SelectedRows @($destructive) | Should -BeTrue
+        Test-DryRunRequired -SelectedRows @($avoid) | Should -BeTrue
+    }
+}
+
 Describe 'Format-DryRunReport' {
     It 'renders a header and one entry per row' {
         $r1 = New-TestAction -Id 'd.1' -Name 'A' -Risk 'Safe'  | ConvertTo-ActionRow

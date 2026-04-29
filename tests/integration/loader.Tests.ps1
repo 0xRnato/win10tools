@@ -6,7 +6,7 @@ BeforeAll {
 Describe 'run.ps1 loader' -Tag 'Integration' {
     It 'exits 0 when invoked with -SkipElevation' {
         $proc = Start-Process -FilePath 'powershell.exe' `
-            -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $script:runPath, '-SkipElevation') `
+            -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $script:runPath, '-SkipElevation', '-LoadOnly') `
             -Wait -PassThru -WindowStyle Hidden
         $proc.ExitCode | Should -Be 0
     }
@@ -20,7 +20,7 @@ Describe 'run.ps1 loader' -Tag 'Integration' {
 
     It 'also accepts -Cli flag' {
         $proc = Start-Process -FilePath 'powershell.exe' `
-            -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $script:runPath, '-SkipElevation', '-Cli') `
+            -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $script:runPath, '-SkipElevation', '-Cli', '-LoadOnly') `
             -Wait -PassThru -WindowStyle Hidden
         $proc.ExitCode | Should -Be 0
     }

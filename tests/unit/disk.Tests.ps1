@@ -2,6 +2,7 @@ BeforeAll {
     $script:repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
     . (Join-Path $script:repoRoot 'src/core/logger.ps1')
     . (Join-Path $script:repoRoot 'src/core/registry.ps1')
+    . (Join-Path $script:repoRoot 'src/core/deletion.ps1')
     . (Join-Path $script:repoRoot 'src/actions/disk.ps1')
     $script:logRoot = Join-Path $env:TEMP ("w10t-disk-" + [Guid]::NewGuid().ToString('N'))
     Initialize-W10Logger -Root $script:logRoot -MirrorToConsole $false
@@ -75,7 +76,8 @@ Describe 'Invoke-DiskPathClear' {
     }
 
     It 'deletes every child item under a path' {
-        Invoke-DiskPathClear -Path $script:tmp -Recurse
+        Set-DeletionMode -Mode Direct
+        Invoke-DiskPathClear -Path $script:tmp
         @(Get-ChildItem -LiteralPath $script:tmp -Force).Count | Should -Be 0
     }
 

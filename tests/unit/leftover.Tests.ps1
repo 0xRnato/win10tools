@@ -2,6 +2,7 @@ BeforeAll {
     $script:repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
     . (Join-Path $script:repoRoot 'src/core/logger.ps1')
     . (Join-Path $script:repoRoot 'src/core/registry.ps1')
+    . (Join-Path $script:repoRoot 'src/core/quarantine.ps1')
     . (Join-Path $script:repoRoot 'src/enumerators/stale-apps.ps1')
     . (Join-Path $script:repoRoot 'src/enumerators/leftover.ps1')
     $script:logRoot = Join-Path $env:TEMP ("w10t-leftover-" + [Guid]::NewGuid().ToString('N'))
@@ -59,12 +60,22 @@ Describe 'Register-LeftoverActions' {
         $ids = @(Get-Actions -Category 'Deep Cleanup' | ForEach-Object { $_.Id })
         $ids | Should -Contain 'cleanup.leftover.scan-user'
         $ids | Should -Contain 'cleanup.leftover.scan-machine'
+        $ids | Should -Contain 'cleanup.leftover.quarantine-user'
+        $ids | Should -Contain 'cleanup.leftover.quarantine-machine'
     }
 
     It 'marks machine-scope action as NeedsAdmin' {
         Register-LeftoverActions
         (Get-Action -Id 'cleanup.leftover.scan-machine').NeedsAdmin | Should -BeTrue
         (Get-Action -Id 'cleanup.leftover.scan-user').NeedsAdmin    | Should -BeFalse
+        (Get-Action -Id 'cleanup.leftover.quarantine-machine').NeedsAdmin | Should -BeTrue
+        (Get-Action -Id 'cleanup.leftover.quarantine-user').NeedsAdmin    | Should -BeFalse
+    }
+
+    It 'marks quarantine actions as destructive' {
+        Register-LeftoverActions
+        (Get-Action -Id 'cleanup.leftover.quarantine-user').Destructive | Should -BeTrue
+        (Get-Action -Id 'cleanup.leftover.quarantine-machine').Destructive | Should -BeTrue
     }
 
     It 'registers itself as an enumerator' {

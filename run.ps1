@@ -2,6 +2,7 @@
 param(
     [switch]$Cli,
     [switch]$SkipElevation,
+    [switch]$LoadOnly,
     [string]$BootstrapUrl = 'https://raw.githubusercontent.com/0xRnato/win10tools/main/run.ps1'
 )
 
@@ -41,6 +42,7 @@ if (-not $scriptRoot) {
         $forward = @()
         if ($Cli)           { $forward += '-Cli' }
         if ($SkipElevation) { $forward += '-SkipElevation' }
+        if ($LoadOnly)      { $forward += '-LoadOnly' }
         & $localRun @forward
         exit $LASTEXITCODE
     } catch {
@@ -68,6 +70,7 @@ Initialize-W10Logger
 Write-W10Log -Level 'Info' -Message 'win10tools starting' -Data @{
     cli            = [bool]$Cli
     skipElevation  = [bool]$SkipElevation
+    loadOnly       = [bool]$LoadOnly
     admin          = Test-IsAdmin
     scriptRoot     = $scriptRoot
 }
@@ -102,6 +105,11 @@ if ($categories) {
     Write-Host '  groups   : (none registered yet - enumerators arrive in M2+)'
 }
 Write-Host ''
+
+if ($LoadOnly) {
+    Write-W10Log -Level 'Info' -Message 'load-only mode complete' -Data @{ status = 'ok' }
+    return
+}
 
 if ($Cli) {
     $cliScript = Join-Path $srcRoot 'cli/menu.ps1'

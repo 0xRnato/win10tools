@@ -4,6 +4,7 @@ if (-not $script:W10CliDir) {
 }
 
 . (Join-Path $script:W10CliDir 'menu-helpers.ps1')
+$script:W10CliLastDryRunSignature = $null
 
 $script:W10CliHelperDir = Join-Path (Split-Path -Parent $script:W10CliDir) 'ui'
 if (Test-Path (Join-Path $script:W10CliHelperDir 'main-window-helpers.ps1')) {
@@ -183,6 +184,7 @@ function Invoke-CliDryRun {
         return
     }
     $report = Format-DryRunReport -SelectedRows $selected
+    $script:W10CliLastDryRunSignature = Get-SelectionSignature -Rows $selected
     Write-Host ''
     Write-Host $report
     Write-Host ''
@@ -199,6 +201,13 @@ function Invoke-CliRun {
     $selected = @(Get-SelectedRows -RowsByCategory $RowsByCategory)
     if ($selected.Count -eq 0) {
         Write-ColorLine -Text 'Nothing selected.' -Color DarkYellow
+        return
+    }
+
+    $currentSignature = Get-SelectionSignature -Rows $selected
+    if ((Test-DryRunRequired -SelectedRows $selected) -and $script:W10CliLastDryRunSignature -ne $currentSignature) {
+        Write-ColorLine -Text 'Dry Run required. Preview the current selection before running it.' -Color DarkYellow
+        Read-Host 'Press Enter to continue'
         return
     }
 

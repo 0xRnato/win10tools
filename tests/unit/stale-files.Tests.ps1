@@ -2,6 +2,7 @@ BeforeAll {
     $script:repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
     . (Join-Path $script:repoRoot 'src/core/logger.ps1')
     . (Join-Path $script:repoRoot 'src/core/registry.ps1')
+    . (Join-Path $script:repoRoot 'src/core/quarantine.ps1')
     . (Join-Path $script:repoRoot 'src/enumerators/stale-files.ps1')
     $script:logRoot = Join-Path $env:TEMP ("w10t-sf-" + [Guid]::NewGuid().ToString('N'))
     Initialize-W10Logger -Root $script:logRoot -MirrorToConsole $false
@@ -80,11 +81,16 @@ Describe 'Register-StaleFilesActions' {
         $ids = @(Get-Actions -Category 'Deep Cleanup' | ForEach-Object { $_.Id })
         $ids | Should -Contain 'cleanup.stale-files.scan-user-folders'
         $ids | Should -Contain 'cleanup.stale-files.scan-appdata'
+        $ids | Should -Contain 'cleanup.stale-files.quarantine-user-folders'
+        $ids | Should -Contain 'cleanup.stale-files.quarantine-appdata'
     }
 
-    It 'classifies scans as non-destructive' {
+    It 'classifies scan actions as non-destructive and quarantine actions as destructive' {
         Register-StaleFilesActions
-        Get-Actions -Category 'Deep Cleanup' | ForEach-Object { $_.Destructive | Should -BeFalse }
+        (Get-Action -Id 'cleanup.stale-files.scan-user-folders').Destructive | Should -BeFalse
+        (Get-Action -Id 'cleanup.stale-files.scan-appdata').Destructive | Should -BeFalse
+        (Get-Action -Id 'cleanup.stale-files.quarantine-user-folders').Destructive | Should -BeTrue
+        (Get-Action -Id 'cleanup.stale-files.quarantine-appdata').Destructive | Should -BeTrue
     }
 
     It 'registers itself as an enumerator' {

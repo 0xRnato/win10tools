@@ -53,3 +53,37 @@ jobs:
         with:
           name: pester-results
           path: TestResults.xml
+
+  integration:
+    name: Integration smoke
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Pester
+        shell: powershell
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module Pester -MinimumVersion 5.5.0 -Force -SkipPublisherCheck -AllowClobber -Scope CurrentUser
+
+      - name: Pester (integration tests)
+        shell: powershell
+        run: |
+          Import-Module Pester -MinimumVersion 5.5.0
+          $config = New-PesterConfiguration
+          $config.Run.Path              = 'tests/integration'
+          $config.Filter.Tag            = @('Integration')
+          $config.Output.Verbosity      = 'Detailed'
+          $config.TestResult.Enabled    = $true
+          $config.TestResult.OutputPath = 'IntegrationTestResults.xml'
+          $config.Run.Exit              = $true
+          Invoke-Pester -Configuration $config
+
+      - name: Upload integration test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pester-integration-results
+          path: IntegrationTestResults.xml
